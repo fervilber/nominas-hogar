@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nominas Hogar</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero no-print">
+      <div>
+        <p class="eyebrow">Aplicacion local sin backend</p>
+        <h1>Generador simple de nominas para empleadas de hogar</h1>
+        <p>Introduce los datos, revisa los importes y usa imprimir para guardar la nomina como PDF. Todo queda en este navegador mediante localStorage.</p>
+      </div>
+      <div class="hero-card">
+        <strong>Periodo</strong>
+        <span id="resumen-periodo">-</span>
+      </div>
+    </section>
+
+    <section class="notice no-print">
+      <strong>Aviso:</strong> esta herramienta prepara un recibo editable y facil de imprimir. Revisa siempre los importes y tipos legales vigentes antes de usarla oficialmente.
+    </section>
+
+    <section class="panel no-print">
+      <div class="section-title">
+        <h2>1. Datos principales</h2>
+        <button type="button" class="ghost" id="btn-limpiar-form">Limpiar formulario</button>
+      </div>
+
+      <div class="grid two">
+        <fieldset>
+          <legend>Empleador/a</legend>
+          <label>Nombre completo <input id="emp_nombre" autocomplete="name" /></label>
+          <label>DNI / NIE <input id="emp_dni" /></label>
+          <label>CCC <input id="emp_ccc" placeholder="Ej: 28/1234567/89" /></label>
+          <label>Domicilio <input id="emp_domicilio" /></label>
+        </fieldset>
+        <fieldset>
+          <legend>Trabajadora</legend>
+          <label>Nombre completo <input id="trab_nombre" /></label>
+          <label>DNI / NIE <input id="trab_dni" /></label>
+          <label>Nº afiliacion S.S. <input id="trab_nss" /></label>
+          <label>IBAN cuenta de pago <input id="trab_iban" /></label>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="panel no-print">
+      <h2>2. Periodo y calculo</h2>
+      <div class="grid four">
+        <label>Año
+          <input type="number" id="nom_ano" min="2000" max="2100" value="2026" />
+        </label>
+        <label>Mes
+          <select id="nom_mes"></select>
+        </label>
+        <label>Dias trabajados
+          <input type="number" id="dias_trabajados" min="0" step="1" />
+        </label>
+        <label>Dias del mes
+          <input type="number" id="dias_mes" readonly />
+        </label>
+      </div>
+
+      <div class="grid four">
+        <label>Salario base mensual (€)
+          <input type="number" id="salario_base" min="0" step="0.01" value="1221.00" />
+        </label>
+        <label>Pagas extra prorrateadas (€)
+          <input type="number" id="pagas_extra" min="0" step="0.01" value="203.50" />
+        </label>
+        <label>Otros devengos (€)
+          <input type="number" id="otros_devengos" min="0" step="0.01" value="0" />
+        </label>
+        <label>IRPF % opcional
+          <input type="number" id="irpf_pct" min="0" step="0.01" value="0" />
+        </label>
+      </div>
+
+      <details>
+        <summary>Tipos de deduccion editables</summary>
+        <div class="grid four small-grid">
+          <label>Cont. comunes % <input type="number" id="tipo_cc" min="0" step="0.01" value="4.70" /></label>
+          <label>Desempleo % <input type="number" id="tipo_desempleo" min="0" step="0.01" value="1.60" /></label>
+          <label>Formacion % <input type="number" id="tipo_formacion" min="0" step="0.01" value="0.10" /></label>
+          <label>MEI % <input type="number" id="tipo_mei" min="0" step="0.01" value="0.20" /></label>
+        </div>
+      </details>
+
+      <div class="actions">
+        <button type="button" id="btn-generar">Generar y guardar</button>
+        <button type="button" class="secondary" id="btn-imprimir" disabled>Imprimir / Guardar PDF</button>
+      </div>
+    </section>
+
+    <section class="payroll-page" id="nomina-print" aria-live="polite">
+      <header class="payroll-header">
+        <div>
+          <h3>Empleador/a</h3>
+          <p><strong id="lbl_emp_nombre">-</strong></p>
+          <p>DNI/NIE: <span id="lbl_emp_dni">-</span></p>
+          <p>CCC: <span id="lbl_emp_ccc">-</span></p>
+          <p>Domicilio: <span id="lbl_emp_domicilio">-</span></p>
+        </div>
+        <div>
+          <h3>Trabajadora - Sistema Especial Hogar</h3>
+          <p><strong id="lbl_trab_nombre">-</strong></p>
+          <p>DNI/NIE: <span id="lbl_trab_dni">-</span></p>
+          <p>Nº S.S.: <span id="lbl_trab_nss">-</span></p>
+        </div>
+      </header>
+
+      <section class="payroll-title">
+        <h2>Recibo individual de salarios</h2>
+        <p>Periodo de liquidacion: <strong id="lbl_periodo">-</strong></p>
+        <p>Dias naturales del mes: <strong id="lbl_dias_mes">-</strong> · Dias liquidados: <strong id="lbl_dias_trabajados">-</strong></p>
+      </section>
+
+      <table>
+        <thead><tr><th>I. Devengos</th><th class="right">Detalle</th><th class="right">Importe</th></tr></thead>
+        <tbody id="tabla_devengos"></tbody>
+      </table>
+
+      <table>
+        <thead><tr><th>II. Deducciones</th><th class="right">Porcentaje</th><th class="right">Importe</th></tr></thead>
+        <tbody id="tabla_deducciones"></tbody>
+      </table>
+
+      <table class="net-table">
+        <tbody>
+          <tr><td>Total devengado</td><td class="right" id="lbl_total_devengado">-</td></tr>
+          <tr><td>Total deducciones</td><td class="right" id="lbl_total_deducciones">-</td></tr>
+          <tr class="net"><td>Liquido a percibir</td><td class="right" id="lbl_neto">-</td></tr>
+        </tbody>
+      </table>
+
+      <p class="base-note">Base de cotizacion usada para el calculo: <strong id="lbl_base_cotizacion">-</strong></p>
+      <div class="iban-box">Pago por transferencia a: <strong id="lbl_trab_iban">-</strong></div>
+
+      <footer class="signatures">
+        <div>Firma del empleador/a</div>
+        <div>Firma de la trabajadora - Recibi</div>
+      </footer>
+    </section>
+
+    <section class="panel no-print">
+      <div class="section-title">
+        <h2>3. Historial local</h2>
+        <button type="button" class="ghost danger" id="btn-borrar-historico">Borrar historial</button>
+      </div>
+      <ul id="lista-historico" class="history"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
